@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Lakhan Rathod</title>
+    <link rel="stylesheet" href="admin.css">
+    <script src="admin.js" defer></script>
+</head>
+
+<body class="login-page">
+
+    <main class="login-container">
+
+        <div class="login-brand">
+            <div class="brand-logo">LR</div>
+            <h1>Lakhan Rathod<span>.</span></h1>
+            <p>PORTFOLIO ADMINISTRATION</p>
+        </div>
+
+        <section class="login-card">
+
+            <div class="login-icon">🔐</div>
+
+            <h2>Welcome Back</h2>
+            <p class="login-subtitle">
+                Sign in to manage your portfolio messages.
+            </p>
+
+            <form id="login-form">
+
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="Enter admin username"
+                    autocomplete="username"
+                    required
+                >
+
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button type="submit" id="login-button">
+                    Sign In <span>→</span>
+                </button>
+
+                <p id="login-status" class="status-message"
+                   role="status" aria-live="polite"></p>
+
+            </form>
+
+        </section>
+
+        <a href="/" class="back-link">← Back to Portfolio</a>
+
+        <footer>© 2026 Lakhan Rathod. All rights reserved.</footer>
+
+    </main>
+
+</body>
+</html>

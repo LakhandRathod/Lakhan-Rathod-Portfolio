@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | Lakhan Rathod</title>
+
+    <link rel="stylesheet" href="admin.css">
+    <script src="admin.js" defer></script>
+</head>
+
+<body class="dashboard-page">
+
+    <div class="dashboard-layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="sidebar-brand">
+                <div class="brand-logo">LR</div>
+                <div>
+                    <h2>Lakhan Rathod<span>.</span></h2>
+                    <small>ADMIN PANEL</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#overview" class="nav-link active">
+                    <span>▦</span> Overview
+                </a>
+
+                <a href="#messages" class="nav-link">
+                    <span>✉</span> Messages
+                </a>
+
+                <a href="/" class="nav-link">
+                    <span>↗</span> Visit Portfolio
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="admin-profile">
+                    <div class="avatar">LR</div>
+                    <div>
+                        <strong id="admin-name">Admin</strong>
+                        <small>Administrator</small>
+                    </div>
+                </div>
+
+                <button id="logout-button" class="logout-button">
+                    ↪ Logout
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+
+            <header class="dashboard-header">
+                <div>
+                    <p class="eyebrow">ADMINISTRATION / OVERVIEW</p>
+                    <h1>Dashboard</h1>
+                    <p>Manage your portfolio enquiries and messages.</p>
+                </div>
+
+                <div class="header-status">
+                    <span class="online-dot"></span>
+                    System Online
+                </div>
+            </header>
+
+            <!-- Statistics -->
+            <section id="overview" class="stats-grid">
+
+                <article class="stat-card">
+                    <div class="stat-icon">✉</div>
+                    <p>Total Messages</p>
+                    <h2 id="total-messages">0</h2>
+                    <small>All received enquiries</small>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-icon">◷</div>
+                    <p>Today's Messages</p>
+                    <h2 id="today-messages">0</h2>
+                    <small>Received today</small>
+                </article>
+
+            </section>
+
+            <!-- Messages -->
+            <section id="messages" class="messages-section">
+
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">INBOX MANAGEMENT</p>
+                        <h2>Contact Messages</h2>
+                    </div>
+
+                    <button id="refresh-button" class="secondary-button">
+                        ↻ Refresh
+                    </button>
+                </div>
+
+                <div class="message-toolbar">
+                    <input
+                        type="search"
+                        id="message-search"
+                        placeholder="Search by name or email..."
+                        aria-label="Search messages"
+                    >
+
+                    <span id="message-count">0 messages</span>
+                </div>
+
+                <div class="table-wrapper">
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>NAME</th>
+                                <th>EMAIL</th>
+                                <th>MESSAGE</th>
+                                <th>DATE</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="messages-body">
+                            <tr>
+                                <td colspan="6" class="empty-state">
+                                    Loading messages...
+                                </td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p id="dashboard-status" class="status-message"
+                   role="status" aria-live="polite"></p>
+
+            </section>
+
+            <footer class="dashboard-footer">
+                © 2026 Lakhan Rathod | Portfolio Admin Dashboard
+            </footer>
+
+        </main>
+
+    </div>
+
+    <!-- Message Details Modal -->
+    <div id="message-modal" class="modal" hidden>
+
+        <div class="modal-card">
+
+            <button id="close-modal" class="modal-close"
+                    aria-label="Close">×</button>
+
+            <p class="eyebrow">MESSAGE DETAILS</p>
+            <h2 id="modal-name">Visitor</h2>
+
+            <p id="modal-email" class="modal-email"></p>
+
+            <div class="modal-message">
+                <p id="modal-message"></p>
+            </div>
+
+            <small id="modal-date"></small>
+
+        </div>
+
+    </div>
+
+</body>
+</html>
