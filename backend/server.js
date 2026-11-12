@@ -1,8 +1,11 @@
 
 const express = require("express");
 const session = require("express-session");
+const MySQLStore = require("express-mysql-session")(session);
 const bcrypt = require("bcryptjs");
+const cors = require("cors");
 const path = require("path");
+
 require("dotenv").config({
     path: path.join(__dirname, ".env")
 });
@@ -10,28 +13,50 @@ require("dotenv").config({
 const db = require("./db");
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === "production";
 
-// Admin session
+const frontendUrl =
+    process.env.FRONTEND_URL ||
+    "https://lakhan-rathod-portfolio.netlify.app";
+
+// Required when deployed behind Render's proxy
+app.set("trust proxy", 1);
+
+// CORS configuration
+app.use(cors({
+    origin: [
+        frontendUrl,
+        "http://localhost:5500",
+        "http://localhost:3000"
+    ],
+    credentials: true
+}));
+
+app.use(express.json({ limit: "20kb" }));
+app.use(express.urlencoded({ extended: true, limit: "20kb" }));
+
+// Persistent MySQL/TiDB session store
+const sessionStore = new MySQLStore({}, db);
+
+// Admin session configuration
 app.use(session({
     name: "lakhan.admin.sid",
     secret: process.env.SESSION_SECRET,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        sameSite: "lax",
-        secure: false, // Local development only
+        sameSite: isProduction ? "none" : "lax",
+        secure: isProduction,
         maxAge: 1000 * 60 * 60
     }
 }));
 
-// Serve portfolio and admin files
-app.use(express.static(path.join(__dirname, "..")));
-
+// Admin authentication middleware
 function requireAdmin(req, res, next) {
-    if (!req.session.admin) {
+    if (!req.session || !req.session.admin) {
         return res.status(401).json({
             success: false,
             message: "Please login first."
@@ -41,10 +66,13 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// Existing contact form API
+// ==========================================
+// CONTACT FORM API
+// ==========================================
+
 app.post("/api/contact", async (req, res) => {
     try {
-        const { name, email, message } = req.body;
+        const { name, email, message } = req.body || {};
 
         if (
             typeof name !== "string" ||
@@ -76,7 +104,7 @@ app.post("/api/contact", async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Contact API error:", error.message);
 
         res.status(500).json({
             success: false,
@@ -85,14 +113,19 @@ app.post("/api/contact", async (req, res) => {
     }
 });
 
-// Admin login
+// ==========================================
+// ADMIN LOGIN
+// ==========================================
+
 app.post("/api/admin/login", async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password } = req.body || {};
 
         if (
             typeof username !== "string" ||
-            typeof password !== "string"
+            typeof password !== "string" ||
+            !username.trim() ||
+            !password
         ) {
             return res.status(400).json({
                 success: false,
@@ -101,7 +134,9 @@ app.post("/api/admin/login", async (req, res) => {
         }
 
         const [rows] = await db.execute(
-            "SELECT id, username, password_hash FROM admin_users WHERE username = ?",
+            `SELECT id, username, password_hash
+             FROM admin_users
+             WHERE username = ?`,
             [username.trim()]
         );
 
@@ -126,25 +161,40 @@ app.post("/api/admin/login", async (req, res) => {
             });
         }
 
-        await new Promise((resolve, reject) => {
-            req.session.regenerate(error => {
-                if (error) reject(error);
-                else resolve();
+        req.session.regenerate(error => {
+            if (error) {
+                console.error("Session regenerate error:", error.message);
+
+                return res.status(500).json({
+                    success: false,
+                    message: "Login failed."
+                });
+            }
+
+            req.session.admin = {
+                id: admin.id,
+                username: admin.username
+            };
+
+            req.session.save(saveError => {
+                if (saveError) {
+                    console.error("Session save error:", saveError.message);
+
+                    return res.status(500).json({
+                        success: false,
+                        message: "Unable to create login session."
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: "Login successful!"
+                });
             });
         });
 
-        req.session.admin = {
-            id: admin.id,
-            username: admin.username
-        };
-
-        res.json({
-            success: true,
-            message: "Login successful!"
-        });
-
     } catch (error) {
-        console.error(error);
+        console.error("Admin login error:", error.message);
 
         res.status(500).json({
             success: false,
@@ -153,7 +203,10 @@ app.post("/api/admin/login", async (req, res) => {
     }
 });
 
-// Check logged-in admin
+// ==========================================
+// CHECK LOGGED-IN ADMIN
+// ==========================================
+
 app.get("/api/admin/me", requireAdmin, (req, res) => {
     res.json({
         success: true,
@@ -161,7 +214,10 @@ app.get("/api/admin/me", requireAdmin, (req, res) => {
     });
 });
 
-// Logout
+// ==========================================
+// ADMIN LOGOUT
+// ==========================================
+
 app.post("/api/admin/logout", requireAdmin, (req, res) => {
     req.session.destroy(error => {
         if (error) {
@@ -171,7 +227,11 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
             });
         }
 
-        res.clearCookie("lakhan.admin.sid");
+        res.clearCookie("lakhan.admin.sid", {
+            httpOnly: true,
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction
+        });
 
         res.json({
             success: true,
@@ -180,13 +240,19 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
     });
 });
 
-// Dashboard statistics
+// ==========================================
+// DASHBOARD STATISTICS
+// ==========================================
+
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
         const [rows] = await db.query(`
             SELECT
                 COUNT(*) AS total,
-                SUM(DATE(created_at) = CURDATE()) AS today
+                COALESCE(
+                    SUM(DATE(created_at) = CURDATE()),
+                    0
+                ) AS today
             FROM contacts
         `);
 
@@ -199,7 +265,7 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Stats API error:", error.message);
 
         res.status(500).json({
             success: false,
@@ -208,7 +274,10 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     }
 });
 
-// Get and search contact messages
+// ==========================================
+// GET AND SEARCH CONTACT MESSAGES
+// ==========================================
+
 app.get("/api/admin/messages", requireAdmin, async (req, res) => {
     try {
         const search = String(req.query.search || "").trim();
@@ -228,7 +297,7 @@ app.get("/api/admin/messages", requireAdmin, async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Messages API error:", error.message);
 
         res.status(500).json({
             success: false,
@@ -237,7 +306,10 @@ app.get("/api/admin/messages", requireAdmin, async (req, res) => {
     }
 });
 
-// Delete a message
+// ==========================================
+// DELETE CONTACT MESSAGE
+// ==========================================
+
 app.delete("/api/admin/messages/:id", requireAdmin, async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -267,7 +339,7 @@ app.delete("/api/admin/messages/:id", requireAdmin, async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Delete API error:", error.message);
 
         res.status(500).json({
             success: false,
@@ -276,13 +348,36 @@ app.delete("/api/admin/messages/:id", requireAdmin, async (req, res) => {
     }
 });
 
-// Admin shortcut
-app.get("/admin", (req, res) => {
-    res.redirect("/admin/login.html");
+// ==========================================
+// HEALTH CHECK
+// ==========================================
+
+app.get("/health", (req, res) => {
+    res.json({
+        success: true,
+        message: "API is running."
+    });
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log(`Portfolio running at http://localhost:${PORT}`);
+// Unknown API route
+app.use("/api", (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "API route not found."
+    });
 });
+
+// ==========================================
+// START SERVER AFTER SESSION STORE IS READY
+// ==========================================
+
+sessionStore.onReady()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Portfolio API running on port ${PORT}`);
+        });
+    })
+    .catch(error => {
+        console.error("Session store startup failed:", error);
+        process.exit(1);
+    });
