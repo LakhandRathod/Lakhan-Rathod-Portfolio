@@ -359,6 +359,10 @@ app.get("/health", (req, res) => {
     });
 });
 
+app.get("/", (req, res) => {
+    res.send("Lucky Portfolio API is Running Successfully!");
+});
+
 // Unknown API route
 app.use("/api", (req, res) => {
     res.status(404).json({
