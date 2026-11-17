@@ -24,11 +24,14 @@ const frontendUrl =
 app.set("trust proxy", 1);
 
 // CORS configuration
+
 app.use(cors({
     origin: [
-        frontendUrl,
+        "https://lakhan-rathod-portfolio.netlify.app",
         "http://localhost:5500",
-        "http://localhost:3000"
+        "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
     ],
     credentials: true
 }));
